@@ -1,4 +1,4 @@
-# Nearest Hospital Finder – Developer Guide
+# Nearest Hospital Finder
 
 This project enables users to click anywhere on a map (within Paris) and find the shortest driving path to the nearest hospital, calculated approximately from the selected point.
 
@@ -11,7 +11,7 @@ This project consists of three main services:
   - **network_edges:** Directed edges between nodes representing road segments, with geometry and length.
   - **network_hospitals:** Hospital locations as nodes, with geometry.
 
-### 2. Backend Service
+### 2. Backend Service (FastAPI)
 - **Pre-launch step:** Use the `OsmDataManager` (`app/db/osmDataManager`) to fetch, validate, transform, and load OSM data into PostGIS.
 - **Router:** `/nearest-hospital`
   - **Input:** Latitude and longitude within Paris boundaries.
