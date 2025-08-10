@@ -25,7 +25,9 @@ This project consists of three main services:
 
 1. **Start all services with Docker Compose:**
    ```sh
-   docker compose up
+   git clone git@github.com:mrassiyacine/hospitals_paris.git
+   cd hospitals_paris
+   docker-compose up
    ```
 
 2. **Access the application:**
