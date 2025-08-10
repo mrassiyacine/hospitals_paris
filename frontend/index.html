@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Nearest Hospital Finder Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { width: 100vw; height: 90vh; }
+    #controls { padding: 1em; background: #f7f7f7; }
+    input, button { font-size: 1em; padding: 0.4em; margin: 0.2em; }
+    .error { color: red; margin-left: 1em; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label>Latitude: <input type="number" step="any" id="latitude" value="48.864" /></label>
+    <label>Longitude: <input type="number" step="any" id="longitude" value="2.410" /></label>
+    <button id="findHospitalBtn">Find Nearest Hospital</button>
+    <span class="error" id="errorMsg"></span>
+  </div>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Paris approximate boundaries
+    const PARIS_BOUNDS = {
+      minLat: 48.815573,
+      maxLat: 48.902144,
+      minLng: 2.224199,
+      maxLng: 2.469921,
+    };
+
+    function isInParis(lat, lng) {
+      return (
+        lat >= PARIS_BOUNDS.minLat &&
+        lat <= PARIS_BOUNDS.maxLat &&
+        lng >= PARIS_BOUNDS.minLng &&
+        lng <= PARIS_BOUNDS.maxLng
+      );
+    }
+
+    // Initialize the map centered on Paris
+    const map = L.map('map').setView([48.8566, 2.3522], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let geojsonLayer = null;
+    let userMarker = null;
+
+    function log(...args) {
+      console.log("[NearestHospital]", ...args);
+    }
+    map.on('click', function(e) {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      console.log("Clicked location:", lat, lng);
+      if (!isInParis(lat, lng)) {
+        console.log("Clicked location is out of Paris boundaries:", lat, lng);
+      } else {
+        // Optionally, show a popup at the clicked location
+        L.popup()
+          .setLatLng([lat, lng])
+          .setContent(`Latitude: ${lat.toFixed(6)}<br>Longitude: ${lng.toFixed(6)}`)
+          .openOn(map);
+      }
+
+      // You can also automatically fill the input fields with these values:
+      document.getElementById('latitude').value = lat;
+      document.getElementById('longitude').value = lng;
+    });
+
+    document.getElementById('findHospitalBtn').onclick = async function () {
+      const lat = parseFloat(document.getElementById('latitude').value);
+      const lng = parseFloat(document.getElementById('longitude').value);
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.textContent = "";
+
+      log("Button clicked with latitude:", lat, "longitude:", lng);
+
+      if (isNaN(lat) || isNaN(lng)) {
+        errorMsg.textContent = "Please enter valid latitude and longitude.";
+        log("Invalid latitude or longitude input");
+        return;
+      }
+
+      if (!isInParis(lat, lng)) {
+        errorMsg.textContent = "Coordinates are outside Paris city boundaries!";
+        log("Coordinates out of Paris boundaries");
+        return;
+      }
+
+      // Show user's location
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker([lat, lng], {title: "Your Location"}).addTo(map).bindPopup("Your Location").openPopup();
+
+      try {
+        log("Sending request to backend...");
+        const response = await fetch(`http://localhost:8000/api/nearest-hospital?latitude=${lat}&longitude=${lng}`);
+        log("Received response:", response);
+
+        if (!response.ok) throw new Error('API error: ' + response.status);
+        const data = await response.json();
+        log("Data from backend:", data);
+
+        // Remove previous hospital/route layer
+        if (geojsonLayer) map.removeLayer(geojsonLayer);
+
+        // Add GeoJSON layer for route and hospital
+        geojsonLayer = L.geoJSON(data, {
+          pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, {
+              radius: 10,
+              fillColor: "#e74c3c",
+              color: "#fff",
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0.9
+            });
+          },
+          style: function (feature) {
+            // Style for the route
+            if (feature.geometry.type === "LineString") {
+              return { color: "#3498db", weight: 5, opacity: 0.8 };
+            }
+          },
+          onEachFeature: function (feature, layer) {
+            if (feature.geometry.type === "Point") {
+              // Popup for hospital node
+              layer.bindPopup("Hospital Node: " + (feature.properties.hospital_node || ''));
+            }
+            if (feature.geometry.type === "LineString") {
+              // Popup for distance
+              layer.bindPopup("Route Distance: " + (feature.properties.distance ? feature.properties.distance.toFixed(2) : '') + " meters");
+            }
+          }
+        }).addTo(map);
+
+        // Fit map to the route bounds
+        const line = data.features.find(f => f.geometry.type === "LineString");
+        if (line) {
+          const latlngs = line.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+          const bounds = L.latLngBounds(latlngs);
+          const center = bounds.getCenter(); // Get the center of the bounds
+          map.setView(center, 13); // Set the map view with a custom zoom level (e.g., 13)
+        } else {
+          log("No route (LineString) found in features.");
+        }
+
+      } catch (err) {
+        errorMsg.textContent = "Failed to fetch nearest hospital: " + err.message;
+        log("Fetch error:", err);
+      }
+    };
+
+    map.on('click', function(e) {
+      log("Map clicked at:", e.latlng);
+    });
+  </script>
+</body>
+</html>
