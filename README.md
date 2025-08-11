@@ -20,24 +20,47 @@ This project consists of three main services:
 
 ### 3. Frontend Service
 - **User Interaction:** Click anywhere within Paris boundaries to query the backend and visualize the shortest path to the nearest hospital.
+## Quick Start Guide
 
-## How to Use
+Follow these steps to get the application up and running:
 
-1. **Start all services with Docker Compose:**
-   ```sh
-   git clone git@github.com:mrassiyacine/hospitals_paris.git
-   cd hospitals_paris
-   docker-compose up
-   ```
+### 1. Clone the Repository
 
-2. **Access the application:**
+```sh
+git clone git@github.com:mrassiyacine/hospitals_paris.git
+cd hospitals_paris
+```
 
-   - Open your browser and go to [http://localhost:3000](http://localhost:3000).
+### 2. Configure Environment Variables
 
-3. **Usage:**
-   - Click anywhere within Paris boundaries on the map to find and display the shortest driving path to the nearest hospital.
+Create a `.env` file in the project root to set up environment variables for the backend and database connections.  
+Example `.env` contents:
 
-Make sure PostGIS and backend services are initialized and populated before using the frontend.
+```env
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+```
+
+Update these values as needed for your local setup or Docker environment.
+
+### 3. Start All Services
+
+```sh
+docker-compose up
+```
+
+*Note: Make sure that PostGIS and backend services are initialized and populated before using the frontend.*
+
+### 4. Access the Application
+
+Open your browser and go to [http://localhost:3000](http://localhost:3000).
+
+### 5. Using the App
+
+Click anywhere within Paris boundaries on the map to find and display the shortest driving path to the nearest hospital.
 
 ## Screenshots
 
